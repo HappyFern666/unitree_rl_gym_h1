@@ -289,7 +289,7 @@ class LeggedRobot(BaseTask):
             heading = torch.atan2(forward[:, 1], forward[:, 0])
             self.commands[:, 2] = torch.clip(0.5*wrap_to_pi(self.commands[:, 3] - heading), -1., 1.)
 
-    def _resample_commands(self, env_ids, fixed_direction='x', fixed_value=1.0):
+    def _resample_commands(self, env_ids, fixed_direction='x', fixed_value=-1.0):
         """ Randommly select commands of some environments with one direction fixed to a value.
 
         Args:
@@ -755,7 +755,7 @@ class LeggedRobot(BaseTask):
         return torch.sum((torch.norm(self.contact_forces[:, self.feet_indices, :], dim=-1) -  self.cfg.rewards.max_contact_force).clip(min=0.), dim=1)
     
     # refer to the paper "Minimizing Energy Consumption Leads to the Emergence of Gaits in Legged Robots"
-    def _reward_forward(self, alpha2):
+    def _reward_forward(self, alpha2=20):
         # r_forward = -α2 * |v_x - v_target_x| - |v_y|^2 - |ω_yaw|^2
         vx_error = torch.abs(self.base_lin_vel[:, 0] - self.commands[:, 0])
         vy_square = torch.square(self.base_lin_vel[:, 1])
@@ -783,14 +783,28 @@ class LeggedRobot(BaseTask):
         # 检测足底接触情况
         contact = self.contact_forces[:, self.feet_indices, 2] > 1.
         left_contact = contact[:, 0]  # 假设第一个foot_index是左脚
-        right_contact = contact[:, 1] # 假设第二个foot_index是右脚
-        
+        right_contact = contact[:, 1] # 假设第二个foot_index是右脚       
         # 惩罚同时抬起或同时支撑的情况
         both_stance = left_contact & right_contact
-        both_swing = ~left_contact & ~right_contact
-        
+        both_swing = ~left_contact & ~right_contact        
         # 理想情况下应该一只脚支撑一只脚摆动
-        gait_symmetry = -(both_stance | both_swing)
-        
+        gait_symmetry = ~(both_stance | both_swing)       
         return gait_symmetry.float()
+    
+    def _reward_foot_trajectory(self):
+        '''
+        奖励足端轨迹的平滑度
+        通过计算足端加速度的大小来衡量
+        '''
+        # 使用接触力判断swing phase
+        contact = self.contact_forces[:, self.feet_indices, 2] > 1.
+        # 在swing phase计算足端加速度
+        foot_acc = torch.sum(torch.square(
+            (self.last_dof_vel[:, -6:] - self.dof_vel[:, -6:]) / self.dt), dim=1)
+        # 只在swing phase惩罚大的加速度
+        return -foot_acc * (~contact).any(dim=1)
+    
+
+
+
 

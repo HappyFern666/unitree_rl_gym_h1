@@ -289,14 +289,23 @@ class LeggedRobot(BaseTask):
             heading = torch.atan2(forward[:, 1], forward[:, 0])
             self.commands[:, 2] = torch.clip(0.5*wrap_to_pi(self.commands[:, 3] - heading), -1., 1.)
 
-    def _resample_commands(self, env_ids):
-        """ Randommly select commands of some environments
+    def _resample_commands(self, env_ids, fixed_direction='x', fixed_value=1.0):
+        """ Randommly select commands of some environments with one direction fixed to a value.
 
         Args:
-            env_ids (List[int]): Environments ids for which new commands are needed
+            env_ids (List[int]): Environments ids for which new commands are needed;
+            fixed_direction·(str, optional): Direction to·fix·the·velocity.('x'·or.'y')
+            fixed_value (float, optional): Value to·fix·the·velocity.
         """
-        self.commands[env_ids, 0] = torch_rand_float(self.command_ranges["lin_vel_x"][0], self.command_ranges["lin_vel_x"][1], (len(env_ids), 1), device=self.device).squeeze(1)
-        self.commands[env_ids, 1] = torch_rand_float(self.command_ranges["lin_vel_y"][0], self.command_ranges["lin_vel_y"][1], (len(env_ids), 1), device=self.device).squeeze(1)
+        # self.commands[env_ids, 0] = torch_rand_float(self.command_ranges["lin_vel_x"][0], self.command_ranges["lin_vel_x"][1], (len(env_ids), 1), device=self.device).squeeze(1)
+        # self.commands[env_ids, 1] = torch_rand_float(self.command_ranges["lin_vel_y"][0], self.command_ranges["lin_vel_y"][1], (len(env_ids), 1), device=self.device).squeeze(1)
+        if fixed_direction == 'x':
+            self.commands[env_ids, 0] = fixed_value
+            self.commands[env_ids, 1] = torch.zeros(len(env_ids), 1, device=self.device).squeeze(1)
+        elif fixed_direction == 'y':
+            self.commands[env_ids, 0] = torch.zeros(len(env_ids), 1, device=self.device).squeeze(1)
+            self.commands[env_ids, 1] = fixed_value
+        
         if self.cfg.commands.heading_command:
             self.commands[env_ids, 3] = torch_rand_float(self.command_ranges["heading"][0], self.command_ranges["heading"][1], (len(env_ids), 1), device=self.device).squeeze(1)
         else:
@@ -636,47 +645,58 @@ class LeggedRobot(BaseTask):
     #------------ reward functions----------------
     def _reward_lin_vel_z(self):
         # Penalize z axis base linear velocity
+        # 1. 惩罚z轴线性速度，
         return torch.square(self.base_lin_vel[:, 2])
     
     def _reward_ang_vel_xy(self):
         # Penalize xy axes base angular velocity
+        # 2. 惩罚x，y轴的角速度
         return torch.sum(torch.square(self.base_ang_vel[:, :2]), dim=1)
     
     def _reward_orientation(self):
         # Penalize non flat base orientation
+        # 3. 惩罚重力投影在 x 和 y 轴上的分量，鼓励机器人保持水平状态
         return torch.sum(torch.square(self.projected_gravity[:, :2]), dim=1)
 
     def _reward_base_height(self):
         # Penalize base height away from target
+        # 4. 惩罚机器人高度偏离目标高度
         base_height = self.root_states[:, 2]
         return torch.square(base_height - self.cfg.rewards.base_height_target)
     
     def _reward_torques(self):
         # Penalize torques
+        # 5. 惩罚过大的关节力矩
         return torch.sum(torch.square(self.torques), dim=1)
 
     def _reward_dof_vel(self):
         # Penalize dof velocities
+        # 6. 惩罚关节速度过快
         return torch.sum(torch.square(self.dof_vel), dim=1)
     
     def _reward_dof_acc(self):
         # Penalize dof accelerations
+        # 7. 惩罚关节加速度
         return torch.sum(torch.square((self.last_dof_vel - self.dof_vel) / self.dt), dim=1)
     
     def _reward_action_rate(self):
         # Penalize changes in actions
+        # 8. 惩罚动作变化
         return torch.sum(torch.square(self.last_actions - self.actions), dim=1)
     
     def _reward_collision(self):
         # Penalize collisions on selected bodies
+        # 9. 检测接触力超过阈值，惩罚碰撞
         return torch.sum(1.*(torch.norm(self.contact_forces[:, self.penalised_contact_indices, :], dim=-1) > 0.1), dim=1)
     
     def _reward_termination(self):
         # Terminal reward / penalty
+        # 10. 终止条件下奖励或惩罚
         return self.reset_buf * ~self.time_out_buf
     
     def _reward_dof_pos_limits(self):
         # Penalize dof positions too close to the limit
+        # 11. 惩罚关节位置超出限制
         out_of_limits = -(self.dof_pos - self.dof_pos_limits[:, 0]).clip(max=0.) # lower limit
         out_of_limits += (self.dof_pos - self.dof_pos_limits[:, 1]).clip(min=0.)
         return torch.sum(out_of_limits, dim=1)
@@ -684,25 +704,30 @@ class LeggedRobot(BaseTask):
     def _reward_dof_vel_limits(self):
         # Penalize dof velocities too close to the limit
         # clip to max error = 1 rad/s per joint to avoid huge penalties
+        # 12. 惩罚关节速度超出限制
         return torch.sum((torch.abs(self.dof_vel) - self.dof_vel_limits*self.cfg.rewards.soft_dof_vel_limit).clip(min=0., max=1.), dim=1)
 
     def _reward_torque_limits(self):
         # penalize torques too close to the limit
+        # 13. 惩罚关节力矩超出限制
         return torch.sum((torch.abs(self.torques) - self.torque_limits*self.cfg.rewards.soft_torque_limit).clip(min=0.), dim=1)
 
     def _reward_tracking_lin_vel(self):
         # Tracking of linear velocity commands (xy axes)
+        # 14. 减小命令速度与实际速度的误差，惩罚线性速度命令的跟踪误差
         lin_vel_error = torch.sum(torch.square(self.commands[:, :2] - self.base_lin_vel[:, :2]), dim=1)
         return torch.exp(-lin_vel_error/self.cfg.rewards.tracking_sigma)
     
     def _reward_tracking_ang_vel(self):
         # Tracking of angular velocity commands (yaw) 
+        # 15. 减小命令速度与实际速度的误差，惩罚角速度命令的跟踪误差
         ang_vel_error = torch.square(self.commands[:, 2] - self.base_ang_vel[:, 2])
         return torch.exp(-ang_vel_error/self.cfg.rewards.tracking_sigma)
 
     def _reward_feet_air_time(self):
         # Reward long steps
         # Need to filter the contacts because the contact reporting of PhysX is unreliable on meshes
+        # 16. 奖励脚离地时间
         contact = self.contact_forces[:, self.feet_indices, 2] > 1.
         contact_filt = torch.logical_or(contact, self.last_contacts) 
         self.last_contacts = contact
@@ -715,13 +740,57 @@ class LeggedRobot(BaseTask):
     
     def _reward_stumble(self):
         # Penalize feet hitting vertical surfaces
+        # 17. 检测脚步接触力的方向，惩罚脚与垂直表面撞击
         return torch.any(torch.norm(self.contact_forces[:, self.feet_indices, :2], dim=2) >\
              5 *torch.abs(self.contact_forces[:, self.feet_indices, 2]), dim=1)
         
     def _reward_stand_still(self):
         # Penalize motion at zero commands
+        # 18. 惩罚在零命令下的运动
         return torch.sum(torch.abs(self.dof_pos - self.default_dof_pos), dim=1) * (torch.norm(self.commands[:, :2], dim=1) < 0.1)
 
     def _reward_feet_contact_forces(self):
         # penalize high contact forces
+        # 19. 惩罚脚部接触力过大
         return torch.sum((torch.norm(self.contact_forces[:, self.feet_indices, :], dim=-1) -  self.cfg.rewards.max_contact_force).clip(min=0.), dim=1)
+    
+    # refer to the paper "Minimizing Energy Consumption Leads to the Emergence of Gaits in Legged Robots"
+    def _reward_forward(self, alpha2):
+        # r_forward = -α2 * |v_x - v_target_x| - |v_y|^2 - |ω_yaw|^2
+        vx_error = torch.abs(self.base_lin_vel[:, 0] - self.commands[:, 0])
+        vy_square = torch.square(self.base_lin_vel[:, 1])
+        omega_yaw_square = torch.square(self.base_ang_vel[:, 2])
+        return -alpha2 * vx_error - vy_square - omega_yaw_square
+    
+    def _reward_energy(self):
+        # r_energy = -τ^T * ̇q
+        return -torch.sum(self.torques * self.dof_vel, dim=1)
+    
+
+    def _reward_alive(self):
+        # the survival bonus c = 20 ∗ v^target_x
+        return 20 * self.commands[:, 0]
+    
+
+    # TODO: Think about the reward function
+    def _reward_gait_symmetry(self):
+        """
+        奖励步态的时间对称性
+        通过比较当前时刻和半个周期前的左右腿状态来衡量
+        1. 鼓励交替的单足支撑步态；
+        2. 惩罚双足同时离地/支撑的情况，学习到更自然的步态节奏
+        """
+        # 检测足底接触情况
+        contact = self.contact_forces[:, self.feet_indices, 2] > 1.
+        left_contact = contact[:, 0]  # 假设第一个foot_index是左脚
+        right_contact = contact[:, 1] # 假设第二个foot_index是右脚
+        
+        # 惩罚同时抬起或同时支撑的情况
+        both_stance = left_contact & right_contact
+        both_swing = ~left_contact & ~right_contact
+        
+        # 理想情况下应该一只脚支撑一只脚摆动
+        gait_symmetry = -(both_stance | both_swing)
+        
+        return gait_symmetry.float()
+

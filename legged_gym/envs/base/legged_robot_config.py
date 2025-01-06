@@ -45,6 +45,7 @@ class LeggedRobotCfg(BaseConfig):
         class ranges:
             lin_vel_x = [-1.0, 1.0] # min max [m/s]
             lin_vel_y = [-1.0, 1.0]   # min max [m/s]
+            # 三维是 xyz的约束，沿z轴的速度现在不需要，x和y选一个就行，最终目标是在一个速度范围内 可以自行控制的policy
             ang_vel_yaw = [-1, 1]    # min max [rad/s]
             heading = [-3.14, 3.14]
 

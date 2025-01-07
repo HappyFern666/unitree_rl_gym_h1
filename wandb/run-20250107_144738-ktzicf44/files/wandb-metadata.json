@@ -1,0 +1,87 @@
+{
+  "os":  "Linux-5.4.0-162-generic-x86_64-with-glibc2.17",
+  "python":  "CPython 3.8.20",
+  "startedAt":  "2025-01-07T06:47:38.193995Z",
+  "args":  [
+    "--task=h1"
+  ],
+  "program":  "legged_gym/scripts/train.py",
+  "codePath":  "legged_gym/scripts/train.py",
+  "git":  {
+    "remote":  "https://github.com/HappyFern666/unitree_rl_gym_h1.git",
+    "commit":  "be7566d23eae19ad221c2f5323e98ac05011f85d"
+  },
+  "email":  "17866878887@163.com",
+  "root":  "/home/xuchuan/unitree_rl_gym_h1",
+  "host":  "iv-ydm9tx3nr4xjd1tsy43l",
+  "executable":  "/home/xuchuan/anaconda3/envs/rl-h1/bin/python",
+  "codePathLocal":  "legged_gym/scripts/train.py",
+  "cpu_count":  64,
+  "cpu_count_logical":  128,
+  "gpu":  "NVIDIA A800-SXM4-80GB",
+  "gpu_count":  8,
+  "disk":  {
+    "/":  {
+      "total":  "528165539840",
+      "used":  "193487679488"
+    }
+  },
+  "memory":  {
+    "total":  "2164155621376"
+  },
+  "cpu":  {
+    "count":  64,
+    "countLogical":  128
+  },
+  "gpu_nvidia":  [
+    {
+      "name":  "NVIDIA A800-SXM4-80GB",
+      "memoryTotal":  "85899345920",
+      "cudaCores":  6912,
+      "architecture":  "Ampere"
+    },
+    {
+      "name":  "NVIDIA A800-SXM4-80GB",
+      "memoryTotal":  "85899345920",
+      "cudaCores":  6912,
+      "architecture":  "Ampere"
+    },
+    {
+      "name":  "NVIDIA A800-SXM4-80GB",
+      "memoryTotal":  "85899345920",
+      "cudaCores":  6912,
+      "architecture":  "Ampere"
+    },
+    {
+      "name":  "NVIDIA A800-SXM4-80GB",
+      "memoryTotal":  "85899345920",
+      "cudaCores":  6912,
+      "architecture":  "Ampere"
+    },
+    {
+      "name":  "NVIDIA A800-SXM4-80GB",
+      "memoryTotal":  "85899345920",
+      "cudaCores":  6912,
+      "architecture":  "Ampere"
+    },
+    {
+      "name":  "NVIDIA A800-SXM4-80GB",
+      "memoryTotal":  "85899345920",
+      "cudaCores":  6912,
+      "architecture":  "Ampere"
+    },
+    {
+      "name":  "NVIDIA A800-SXM4-80GB",
+      "memoryTotal":  "85899345920",
+      "cudaCores":  6912,
+      "architecture":  "Ampere"
+    },
+    {
+      "name":  "NVIDIA A800-SXM4-80GB",
+      "memoryTotal":  "85899345920",
+      "cudaCores":  6912,
+      "architecture":  "Ampere"
+    }
+  ],
+  "cudaVersion":  "12.2"
+}

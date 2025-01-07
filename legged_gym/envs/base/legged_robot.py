@@ -289,7 +289,7 @@ class LeggedRobot(BaseTask):
             heading = torch.atan2(forward[:, 1], forward[:, 0])
             self.commands[:, 2] = torch.clip(0.5*wrap_to_pi(self.commands[:, 3] - heading), -1., 1.)
 
-    def _resample_commands(self, env_ids, fixed_direction='x', fixed_value=-1.0):
+    def _resample_commands(self, env_ids, fixed_direction='x', fixed_value=-2.0):
         """ Randommly select commands of some environments with one direction fixed to a value.
 
         Args:

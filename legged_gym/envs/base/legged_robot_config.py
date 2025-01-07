@@ -43,8 +43,8 @@ class LeggedRobotCfg(BaseConfig):
         resampling_time = 10. # time before command are changed[s]
         heading_command = True # if true: compute ang vel command from heading error
         class ranges:
-            lin_vel_x = [-1.0, 1.0] # min max [m/s]
-            lin_vel_y = [-1.0, 1.0]   # min max [m/s]
+            lin_vel_x = [-10.0, 10.0] # min max [m/s]
+            lin_vel_y = [-10.0, 10.0]   # min max [m/s]
             # 三维是 xyz的约束，沿z轴的速度现在不需要，x和y选一个就行，最终目标是在一个速度范围内 可以自行控制的policy
             ang_vel_yaw = [-1, 1]    # min max [rad/s]
             heading = [-3.14, 3.14]
@@ -64,7 +64,7 @@ class LeggedRobotCfg(BaseConfig):
         stiffness = {'joint_a': 10.0, 'joint_b': 15.}  # [N*m/rad]
         damping = {'joint_a': 1.0, 'joint_b': 1.5}     # [N*m*s/rad]
         # action scale: target angle = actionScale * action + defaultAngle
-        action_scale = 0.5
+        action_scale = 0.4 # 0.5
         # decimation: Number of control action updates @ sim DT per policy DT
         decimation = 4
 
@@ -107,8 +107,8 @@ class LeggedRobotCfg(BaseConfig):
             lin_vel_z = -2.0
             ang_vel_xy = -0.05
             orientation = -0.
-            torques = -0.00001
-            dof_vel = -0.
+            torques = -0.001 # -0.00001
+            dof_vel = -0.001
             dof_acc = -2.5e-7
             base_height = -0. 
             feet_air_time =  0.0 # 1.0
@@ -119,7 +119,7 @@ class LeggedRobotCfg(BaseConfig):
             # forward = 1.0
             # energy = 0.04
             # alive = 1.0
-            # gait_symmetry = 0.5
+            gait_symmetry = 0.5
 
         only_positive_rewards = True # if true negative total rewards are clipped at zero (avoids early termination problems)
         tracking_sigma = 0.25 # tracking reward = exp(-error^2/sigma)

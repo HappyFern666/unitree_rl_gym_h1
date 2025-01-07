@@ -289,7 +289,7 @@ class LeggedRobot(BaseTask):
             heading = torch.atan2(forward[:, 1], forward[:, 0])
             self.commands[:, 2] = torch.clip(0.5*wrap_to_pi(self.commands[:, 3] - heading), -1., 1.)
 
-    def _resample_commands(self, env_ids, fixed_direction='x', fixed_value=-2.0):
+    def _resample_commands(self, env_ids, fixed_direction='x', fixed_value=1.0):
         """ Randommly select commands of some environments with one direction fixed to a value.
 
         Args:
@@ -298,7 +298,7 @@ class LeggedRobot(BaseTask):
             fixed_value (float, optional): Value to·fix·the·velocity.
         """
         # self.commands[env_ids, 0] = torch_rand_float(self.command_ranges["lin_vel_x"][0], self.command_ranges["lin_vel_x"][1], (len(env_ids), 1), device=self.device).squeeze(1)
-        # self.commands[env_ids, 1] = torch_rand_float(self.command_ranges["lin_vel_y"][0], self.command_ranges["lin_vel_y"][1], (len(env_ids), 1), device=self.device).squeeze(1)
+        # self.commands[env_ids, 1] = torch_rand_dfloat(self.command_ranges["lin_vel_y"][0], self.command_ranges["lin_vel_y"][1], (len(env_ids), 1), device=self.device).squeeze(1)
         if fixed_direction == 'x':
             self.commands[env_ids, 0] = fixed_value
             self.commands[env_ids, 1] = torch.zeros(len(env_ids), 1, device=self.device).squeeze(1)
@@ -804,6 +804,43 @@ class LeggedRobot(BaseTask):
         # 只在swing phase惩罚大的加速度
         return -foot_acc * (~contact).any(dim=1)
     
+
+    def _reward_ankle_distance(self):
+        """奖励两踝关节 y 方向的距离保持在 0.5 左右
+        
+        变量说明：
+        - self.feet_state: [num_envs, num_feet, 13] 包含所有足端状态信息
+        来自 h1_env.py 中的 _init_foot() 方法
+        13 维分别为: 3 位置 + 4 四元数 + 3 线速度 + 3 角速度
+        - feet_pos: [num_envs, num_feet, 3] 提取足端位置信息
+        - ankle_y_dist: [num_envs] 两踝关节在 y 方向的距离
+        
+        Returns:
+            [torch.Tensor]: [num_envs] 每个环境的奖励值
+        """
+        # 获取两踝关节的位置
+        feet_pos = self.feet_state[:, :, :3]  # [num_envs, num_feet, 3]
+        
+        # 计算两踝关节在 y 方向的距离
+        ankle_y_dist = torch.abs(feet_pos[:, 0, 1] - feet_pos[:, 1, 1])  # [num_envs]
+        
+        # 计算与目标距离 0.5 的误差
+        target_dist = 0.5
+        error = torch.abs(ankle_y_dist - target_dist)
+        
+        # 使用高斯函数将误差转换为奖励
+        reward = torch.exp(-error / 0.1)  # sigma=0.1 可以根据需要调整
+        
+        return reward
+    
+    def _reward_direction_following(self):
+        # 计算速度方向与x轴正向的夹角
+        vel_direction = torch.atan2(self.base_lin_vel[:, 1], self.base_lin_vel[:, 0])
+        
+        # 使用高斯函数将角度误差转换为奖励
+        # 角度越大,奖励越小
+        direction_error = torch.abs(vel_direction)  # 与x轴正向的偏差
+        return torch.exp(-direction_error / 0.5)  # sigma=0.5可以根据需要调整
 
 
 

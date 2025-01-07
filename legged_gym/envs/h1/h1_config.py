@@ -102,10 +102,10 @@ class H1RoughCfg( LeggedRobotCfg ):
 class H1RoughCfgPPO( LeggedRobotCfgPPO ):
     class policy:
         init_noise_std = 0.8
-        actor_hidden_dims = [32]
-        critic_hidden_dims = [32]
+        actor_hidden_dims = [64, 32]
+        critic_hidden_dims = [64, 32]
         activation = 'elu' # can be elu, relu, selu, crelu, lrelu, tanh, sigmoid
-        # only for 'ActorCriticRecurrent':
+        # only for 'ActorCriticRecurrent':d
         rnn_type = 'lstm'
         rnn_hidden_size = 64
         rnn_num_layers = 1
@@ -113,7 +113,7 @@ class H1RoughCfgPPO( LeggedRobotCfgPPO ):
         entropy_coef = 0.01
     class runner( LeggedRobotCfgPPO.runner ):
         policy_class_name = "ActorCriticRecurrent"
-        max_iterations = 10000
+        max_iterations = 20000 # 10000
         run_name = ''
         experiment_name = 'h1'
 

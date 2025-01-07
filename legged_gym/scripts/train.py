@@ -12,7 +12,7 @@ import wandb
 
 def train(args):
     wandb.init(
-        project="legged_robot_training",
+        project="unitree_H1_training",
         name=args.experiment_name if args.experiment_name else f"training_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
         config={
             "task": args.task,

@@ -120,8 +120,8 @@ class LeggedRobotCfg(BaseConfig):
             # energy = 0.2
             # alive = 1.0
             gait_symmetry = 0.5
-            ankle_distance = 1.0
-            direction_following = 1.0
+            ankle_distance = 2.0
+            direction_following = 2.0
 
         only_positive_rewards = True # if true negative total rewards are clipped at zero (avoids early termination problems)
         tracking_sigma = 0.25 # tracking reward = exp(-error^2/sigma)
